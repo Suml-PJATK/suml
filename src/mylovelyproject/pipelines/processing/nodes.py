@@ -1,8 +1,3 @@
-"""
-This is a boilerplate pipeline 'processing'
-generated using Kedro 0.18.14
-"""
-
 import pandas as pd
 import numpy as np
 from sklearn.pipeline import Pipeline
@@ -10,9 +5,11 @@ from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.compose import ColumnTransformer
 from sklearn.model_selection import train_test_split
-from sklearn.model_selection import StratifiedShuffleSplit
 from sklearn.linear_model import LinearRegression
-from sklearn.base import BaseEstimator, TransformerMixin
+
+from pycaret.regression import setup, compare_models, predict_model, tune_model, save_model, load_model
+import pickle
+
 
 
 def load_housing_data(housing):
@@ -25,28 +22,25 @@ def explore_housing_data(housing):
     print(housing.ocean_proximity.value_counts())
     return housing
 
-def stratify_data(housing):
-    housing['income_cat'] = pd.cut(housing['median_income'],
-                                   bins=[0., 1.5, 3.0, 4.5, 6., np.inf],
-                                   labels=[1, 2, 3, 4, 5])
 
-    split = StratifiedShuffleSplit(n_splits=1, test_size=0.2, random_state=42)
-    for train_index, test_index in split.split(housing, housing["income_cat"]):
-        strat_train_set = housing.loc[train_index]
-        strat_test_set = housing.loc[test_index]
-    # Create 'income_cat' column for stratification
-    for set_ in (strat_train_set, strat_test_set):
-        set_.drop('income_cat', axis=1, inplace=True)
+def prepare_data(data,  test_size=0.2, random_state=42):
+    # Separate the target variable
+    features = data.drop("median_house_value", axis=1)
+    features = data.drop("ocean_proximity", axis=1)
 
-    return strat_train_set, strat_test_set
+    labels = data["median_house_value"].copy()
 
+    # Splitting data into training and testing sets
+    X_train, X_test, y_train, y_test = train_test_split(features, labels, test_size=test_size,
+                                                        random_state=random_state)
 
-def add_features(housing):
-    housing["rooms_per_household"] = housing["total_rooms"] / housing["households"]
-    housing["bedrooms_per_room"] = housing["total_bedrooms"] / housing["total_rooms"]
-    housing["population_per_household"] = housing["population"] / housing["households"]
+    # features_with_extra_features = add_extra_features(features, add_bedrooms_per_room)
 
-    return housing
+    # Define numerical and categorical columns
+    num_attribs = ["longitude", "latitude", "housing_median_age",
+                   "total_rooms", "total_bedrooms", "population",
+                   "households", "median_income"]
+
 
 
 # Define the custom transformer for additional attributes
@@ -89,13 +83,17 @@ def prepare_data(strat_train_set):
     cat_attribs = ["ocean_proximity"]
     full_pipeline = ColumnTransformer([
         ("num", num_pipeline, num_attribs),
-        ("cat", OneHotEncoder(), cat_attribs),
     ])
 
     # Apply the full pipeline
     housing_prepared = full_pipeline.fit_transform(housing)
 
-    return housing_prepared, housing_labels
+
+    # Apply transformations to training and test sets
+    X_train_prepared = full_pipeline.fit_transform(X_train)
+    X_test_prepared = full_pipeline.transform(X_test)
+
+    return X_train_prepared, y_train, X_test_prepared, y_test, full_pipeline
 
 
 
@@ -112,3 +110,15 @@ def predict(model, features):
 def predictions_to_dataframe(predictions):
     df = pd.DataFrame(predictions, columns=['Predicted_Value'])
     return df
+
+
+def features_to_dataframe(features):
+    df = pd.DataFrame(features)
+    return df
+
+
+def train_model(features, labels):
+    model = LinearRegression()
+    model.fit(features, labels)
+    return model
+

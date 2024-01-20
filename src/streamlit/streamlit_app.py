@@ -1,70 +1,60 @@
 import streamlit as st
 import pandas as pd
 import joblib
+import os
 
-from sklearn.pipeline import Pipeline
-from sklearn.impute import SimpleImputer
-from sklearn.preprocessing import StandardScaler
-from sklearn.compose import ColumnTransformer
+# Load preprocessing pipeline
+preprocessing_pipeline = joblib.load('../../data/05_model_input/preprocessing_pipeline.joblib')
 
-# Load your trained model
-model = joblib.load("../../data/06_models/tuned_model.pkl")
+# Initialize the current model
+current_model_name = "best_model.pkl"
+model_path = os.path.join("../../data/06_models", current_model_name)
+model = joblib.load(model_path)
 
+models_dir = "../../data/06_models/"
 
-# Define a function for data preprocessing
-def endpoint_prepare_data(data):
-    num_attribs = ["longitude", "latitude", "housing_median_age",
-                   "total_rooms", "total_bedrooms", "population",
-                   "households", "median_income"]
+def list_models():
+    return [file for file in os.listdir(models_dir) if file.endswith('.pkl') and file != '.gitkeep']
 
-    num_pipeline = Pipeline([
-        ('imputer', SimpleImputer(strategy="median")),
-        ('std_scaler', StandardScaler()),
-    ])
+def select_model(model_name):
+    global model, current_model_name
+    model_path = os.path.join(models_dir, model_name)
+    model = joblib.load(model_path)
+    current_model_name = model_name
 
-    full_pipeline = ColumnTransformer([
-        ("num", num_pipeline, num_attribs),
-    ])
+# Streamlit layout
+st.title("California Housing Price Prediction")
 
-    return full_pipeline.fit_transform(data)
+# Model selection
+model_list = list_models()
+selected_model = st.selectbox("Select a model:", model_list, index=model_list.index(current_model_name))
+if st.button("Load Selected Model"):
+    select_model(selected_model)
+    st.success(f"Model changed to {selected_model}")
 
+# Prediction form
+with st.form(key='predict_form'):
+    st.write("Enter the data for prediction:")
+    longitude = st.number_input("Longitude")
+    latitude = st.number_input("Latitude")
+    housing_median_age = st.number_input("Housing Median Age")
+    total_rooms = st.number_input("Total Rooms")
+    total_bedrooms = st.number_input("Total Bedrooms")
+    population = st.number_input("Population")
+    households = st.number_input("Households")
+    median_income = st.number_input("Median Income")
 
-# Streamlit application start
-st.title('Machine Learning Model Prediction')
+    submit_button = st.form_submit_button(label='Predict')
 
-# Create input fields
-longitude = st.number_input('Longitude')
-latitude = st.number_input('Latitude')
-housing_median_age = st.number_input('Housing Median Age')
-total_rooms = st.number_input('Total Rooms')
-total_bedrooms = st.number_input('Total Bedrooms')
-population = st.number_input('Population')
-households = st.number_input('Households')
-median_income = st.number_input('Median Income')
+    if submit_button:
+        # Prepare data for prediction
+        feature_names = ["longitude", "latitude", "housing_median_age", "total_rooms",
+                         "total_bedrooms", "population", "households", "median_income"]
+        data = [[longitude, latitude, housing_median_age, total_rooms, total_bedrooms,
+                 population, households, median_income]]
+        input_df = pd.DataFrame(data, columns=feature_names)
+        prepared_data = preprocessing_pipeline.transform(input_df)
 
-input_data = {
-    "longitude": longitude,
-    "latitude": latitude,
-    "housing_median_age": housing_median_age,
-    "total_rooms": total_rooms,
-    "total_bedrooms": total_bedrooms,
-    "population": population,
-    "households": households,
-    "median_income": median_income
-}
-
-
-# Function to make predictions
-def make_prediction(input_data):
-    housing = pd.DataFrame([input_data])
-    prepared_housing = endpoint_prepare_data(housing)
-    prediction = model.predict(prepared_housing)
-    return prediction
-
-
-# Button to make predictions
-if st.button('Predict'):
-    prediction = make_prediction(input_data)
-    st.write(f'Prediction: {prediction[0]}')
-
-# Run the Streamlit app with: streamlit run your_script_name.py
+        # Make a prediction
+        prediction = model.predict(prepared_data)
+        st.write(f"Predicted House Price: {prediction[0]}")

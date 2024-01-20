@@ -2,6 +2,11 @@
 This is a boilerplate pipeline 'processing'
 generated using Kedro 0.18.14
 """
+"""
+This is a boilerplate pipeline 'processing'
+generated using Kedro 0.18.14
+"""
+
 
 from kedro.pipeline import Pipeline, pipeline, node
 from .nodes import *
@@ -22,36 +27,37 @@ def create_pipeline(**kwargs) -> Pipeline:
                 outputs="explored_housing_data",
                 name="explore_housing_data_node"
             ),
-            node(
-                func=stratify_data,
-                inputs="explored_housing_data",
-                outputs=["strat_train_set", "strat_test_set"],
-                name="stratify_data_node"
-            ),
-            node(
-                func=add_features,
-                inputs="strat_train_set",
-                outputs="feature_added_housing",
-                name="add_features_node"
-            ),
+
             node(
                 func=prepare_data,
-                inputs="feature_added_housing",
-                outputs=["housing_prepared", "housing_labels"],
+                inputs="explored_housing_data",
+                outputs=["X_train", "y_train", "X_test", "y_test", "preprocessing_pipeline"],
                 name="prepare_data_node"
             ),
 
             node(
-                func=train_model,
-                inputs=["housing_prepared", "housing_labels"],
-                outputs="trained_model",
-                name="train_model_node"
+                func=train_model_with_pycaret,  # train_model for normal train
+                inputs=["X_train", "y_train"],
+                outputs="best_model",  # change it to trained_model in case of normal train
+                name="train_model_with_pycaret_node"  # train_model_node for normal train
             ),
             node(
-                func=predict,
-                inputs=["trained_model", "housing_prepared"],  # predicting on the training set
+                func=optimize_model_hyperparameters,
+                inputs="best_model",
+                outputs="tuned_model",
+                name="optimize_hyperparameters_node"
+            ),
+            node(
+                func=predict_pycaret,  # predict for normal train
+                inputs=["tuned_model", "X_test"],  # 'best_model' for normal train
                 outputs="predictions",
                 name="predict_node"
+            ),
+            node(
+                func=features_to_dataframe,
+                inputs="X_train",
+                outputs="housing_feature_df",
+                name="convert_feature_node"
             ),
             node(
                 func=predictions_to_dataframe,
