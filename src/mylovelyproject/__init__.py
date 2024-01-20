@@ -1,3 +1,4 @@
-#
-#
-# __version__ = "0.1"
+"""mylovelyproject
+"""
+
+__version__ = "0.1"

@@ -1,5 +1,4 @@
-
-4# My Lovely Project
+# My Lovely Project
 
 ## Setting Up the Project Environment
 ### Prerequisites
@@ -13,7 +12,6 @@
 - hosing.csv file stored in Azure Blob Storage. Use `dvc pull` to get it (sas token will get disabled on 01/04/2024)
 - execute the pipeline `kedro run` 
 Take a look at the [Kedro documentation](https://docs.kedro.org) to get started.
-
 ## Rules and guidelines
 
 In order to get the best out of the template:
@@ -23,6 +21,15 @@ In order to get the best out of the template:
 * Don't commit data to your repository
 * Don't commit any credentials or your local configuration to your repository. Keep all your credentials and local configuration in `conf/local/`
 
+## How to install dependencies
+
+Declare any dependencies in `src/requirements.txt` for `pip` installation and `src/environment.yml` for `conda` installation.
+
+To install them, run:
+
+```
+pip install -r src/requirements.txt
+```
 
 ## How to run your Kedro pipeline
 
