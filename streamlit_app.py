@@ -4,14 +4,14 @@ import joblib
 import os
 
 # Load preprocessing pipeline
-preprocessing_pipeline = joblib.load('../../data/05_model_input/preprocessing_pipeline.joblib')
+preprocessing_pipeline = joblib.load('data/05_model_input/preprocessing_pipeline.joblib')
 
 # Initialize the current model
 current_model_name = "best_model.pkl"
-model_path = os.path.join("../../data/06_models", current_model_name)
+model_path = os.path.join("data/06_models", current_model_name)
 model = joblib.load(model_path)
 
-models_dir = "../../data/06_models/"
+models_dir = "data/06_models/"
 
 def list_models():
     return [file for file in os.listdir(models_dir) if file.endswith('.pkl') and file != '.gitkeep']
